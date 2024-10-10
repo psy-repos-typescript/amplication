@@ -19,7 +19,7 @@ import { AppContext } from "../context/appContext";
 import useModule from "../Modules/hooks/useModule";
 import { DATE_CREATED_FIELD } from "../Modules/ModuleNavigationList";
 import useBreadcrumbs from "../Layout/useBreadcrumbs";
-import { useOnboardingChecklistContext } from "../OnboardingChecklist/context/OnboardingChecklistContext";
+import { useResourceBaseUrl } from "../util/useResourceBaseUrl";
 
 type Props = {
   match: match<{ resource: string; entityId: string; fieldId: string }>;
@@ -33,13 +33,18 @@ type UpdateData = {
   updateEntity: models.Entity;
 };
 
+const RESOURCE_BASE_PATH = "/:workspace/:project/:resource";
+const PLATFORM_RESOURCE_BASE_PATH = "/:workspace/platform/:project/:resource";
+
 const Entity = ({ match }: Props) => {
   const { entityId, resource } = match.params;
-  const { addEntity, currentWorkspace, currentProject } =
-    useContext(AppContext);
+  const { addEntity } = useContext(AppContext);
+
+  const { baseUrl, isPlatformConsole } = useResourceBaseUrl({
+    overrideResourceId: resource,
+  });
 
   const { findModuleRefetch } = useModule();
-  const { setOnboardingProps } = useOnboardingChecklistContext();
 
   const { data, loading, error } = useQuery<TData>(GET_ENTITY, {
     variables: {
@@ -87,18 +92,16 @@ const Entity = ({ match }: Props) => {
             id: id,
           },
         },
-      })
-        .catch(console.error)
-        .then(() => {
-          setOnboardingProps({
-            entityUpdated: true,
-          });
-        });
+      }).catch(console.error);
     },
-    [setOnboardingProps, updateEntity]
+    [updateEntity]
   );
 
   const errorMessage = formatError(error || updateError);
+
+  const basePath = isPlatformConsole
+    ? PLATFORM_RESOURCE_BASE_PATH
+    : RESOURCE_BASE_PATH;
 
   useBreadcrumbs(data?.entity.name, match.url);
 
@@ -110,19 +113,19 @@ const Entity = ({ match }: Props) => {
         data && (
           <>
             <InnerTabLink
-              to={`/${currentWorkspace?.id}/${currentProject?.id}/${resource}/entities/${data.entity.id}`}
+              to={`${baseUrl}/entities/${data.entity.id}`}
               icon="settings"
             >
               General Settings
             </InnerTabLink>
             <InnerTabLink
-              to={`/${currentWorkspace?.id}/${currentProject?.id}/${resource}/entities/${data.entity.id}/permissions`}
+              to={`${baseUrl}/entities/${data.entity.id}/permissions`}
               icon="lock"
             >
               Permissions
             </InnerTabLink>
             <InnerTabLink
-              to={`/${currentWorkspace?.id}/${currentProject?.id}/${resource}/entities/${data.entity.id}/fields`}
+              to={`${baseUrl}/entities/${data.entity.id}/fields`}
               icon="option_set"
             >
               Fields
@@ -140,7 +143,9 @@ const Entity = ({ match }: Props) => {
         <span>can't find</span> /**@todo: Show formatted error message */
       ) : (
         <Switch>
-          <RouteWithAnalytics path="/:workspace/:project/:resource/entities/:entityId/permissions">
+          <RouteWithAnalytics
+            path={`${basePath}/entities/:entityId/permissions`}
+          >
             <PermissionsForm
               entityId={entityId}
               entityName={data.entity.name}
@@ -149,16 +154,18 @@ const Entity = ({ match }: Props) => {
               objectDisplayName={data.entity.pluralDisplayName}
             />
           </RouteWithAnalytics>
-          <RouteWithAnalytics path="/:workspace/:project/:resource/entities/:entityId/fields/:fieldId">
+          <RouteWithAnalytics
+            path={`${basePath}/entities/:entityId/fields/:fieldId`}
+          >
             <EntityField />
           </RouteWithAnalytics>
-          <RouteWithAnalytics path="/:workspace/:project/:resource/entities/:entityId/fields/">
+          <RouteWithAnalytics path={`${basePath}/entities/:entityId/fields/`}>
             <EntityFieldList
               entityId={data.entity.id}
               entityName={data.entity.name}
             />
           </RouteWithAnalytics>
-          <RouteWithAnalytics path="/:workspace/:project/:resource/entities/:entityId">
+          <RouteWithAnalytics path={`${basePath}/entities/:entityId`}>
             <EntityForm
               entity={data.entity}
               resourceId={resource}

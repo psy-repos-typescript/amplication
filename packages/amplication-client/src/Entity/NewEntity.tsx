@@ -34,7 +34,8 @@ import "./NewEntity.scss";
 import { USER_ENTITY } from "./constants";
 import useModule from "../Modules/hooks/useModule";
 import CreateWithJovuButton from "../Assistant/CreateWithJovuButton";
-import { useOnboardingChecklistContext } from "../OnboardingChecklist/context/OnboardingChecklistContext";
+import { over } from "lodash";
+import { useResourceBaseUrl } from "../util/useResourceBaseUrl";
 
 type CreateEntityType = Omit<models.EntityCreateInput, "resource">;
 
@@ -85,9 +86,10 @@ const NewEntity = ({ resourceId, onSuccess }: Props) => {
   const { addEntity, currentWorkspace, currentProject } =
     useContext(AppContext);
 
+  const { baseUrl } = useResourceBaseUrl({ overrideResourceId: resourceId });
+
   const [confirmInstall, setConfirmInstall] = useState<boolean>(false);
   const { findModuleRefetch } = useModule();
-  const { setOnboardingProps } = useOnboardingChecklistContext();
 
   const [createEntity, { error, data, loading }] = useMutation<DType>(
     CREATE_ENTITY,
@@ -197,15 +199,9 @@ const NewEntity = ({ resourceId, onSuccess }: Props) => {
             resource: { connect: { id: resourceId } },
           },
         },
-      })
-        .catch(console.error)
-        .then(() => {
-          setOnboardingProps({
-            entityUpdated: true,
-          });
-        });
+      }).catch(console.error);
     },
-    [createEntity, resourceId, setOnboardingProps]
+    [createEntity, resourceId]
   );
 
   const handleDismissConfirmationInstall = useCallback(() => {
@@ -224,28 +220,18 @@ const NewEntity = ({ resourceId, onSuccess }: Props) => {
 
   useEffect(() => {
     if (data) {
-      history.push(
-        `/${currentWorkspace?.id}/${currentProject?.id}/${resourceId}/entities/${data.createOneEntity.id}`
-      );
+      history.push(`${baseUrl}/entities/${data.createOneEntity.id}`);
     }
-  }, [history, data, resourceId, currentWorkspace, currentProject]);
+  }, [history, data, baseUrl]);
 
   useEffect(() => {
     if (defaultEntityData) {
       const userEntity = defaultEntityData.createDefaultEntities.find(
         (x) => x.name.toLowerCase() === USER_ENTITY.toLowerCase()
       );
-      history.push(
-        `/${currentWorkspace?.id}/${currentProject?.id}/${resourceId}/entities/${userEntity.id}`
-      );
+      history.push(`${baseUrl}/entities/${userEntity.id}`);
     }
-  }, [
-    history,
-    defaultEntityData,
-    resourceId,
-    currentWorkspace,
-    currentProject,
-  ]);
+  }, [history, defaultEntityData, baseUrl]);
 
   const errorMessage = formatError(error);
 

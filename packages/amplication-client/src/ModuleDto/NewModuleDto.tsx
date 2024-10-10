@@ -1,13 +1,12 @@
 import { pascalCase } from "pascal-case";
-import { useCallback, useContext } from "react";
+import { useCallback } from "react";
 import { useHistory } from "react-router-dom";
 import { EnumButtonStyle } from "../Components/Button";
 import NewModuleChild from "../Modules/NewModuleChild";
-import { AppContext } from "../context/appContext";
 import * as models from "../models";
 import { formatError } from "../util/error";
+import { useResourceBaseUrl } from "../util/useResourceBaseUrl";
 import useModuleDto from "./hooks/useModuleDto";
-import { useOnboardingChecklistContext } from "../OnboardingChecklist/context/OnboardingChecklistContext";
 
 type Props = {
   resourceId: string;
@@ -27,8 +26,7 @@ const NewModuleDto = ({
   navigateToDtoOnCreate = true,
 }: Props) => {
   const history = useHistory();
-  const { currentWorkspace, currentProject } = useContext(AppContext);
-  const { setOnboardingProps } = useOnboardingChecklistContext();
+  const { baseUrl } = useResourceBaseUrl({ overrideResourceId: resourceId });
 
   const {
     createModuleDto,
@@ -61,13 +59,10 @@ const NewModuleDto = ({
             }
             if (navigateToDtoOnCreate) {
               history.push(
-                `/${currentWorkspace?.id}/${currentProject?.id}/${resourceId}/modules/${moduleId}/dtos/${result.data.createModuleDto.id}`
+                `${baseUrl}/modules/${moduleId}/dtos/${result.data.createModuleDto.id}`
               );
             }
           }
-          setOnboardingProps({
-            dtoUpdated: true,
-          });
         });
     },
     [
@@ -75,10 +70,8 @@ const NewModuleDto = ({
       resourceId,
       onDtoCreated,
       history,
-      currentWorkspace?.id,
-      currentProject?.id,
+      baseUrl,
       navigateToDtoOnCreate,
-      setOnboardingProps,
     ]
   );
 

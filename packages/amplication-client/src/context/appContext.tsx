@@ -25,8 +25,8 @@ export interface AppContextInterface {
     data: models.ResourceCreateWithEntitiesInput,
     eventName: string
   ) => void;
-  setResource: (resource: models.Resource) => void;
   projectConfigurationResource: models.Resource | undefined;
+  pluginRepositoryResource: models.Resource | undefined;
   handleSearchChange: (searchResults: string) => void;
   loadingResources: boolean;
   reloadResources: () => void;
@@ -66,6 +66,11 @@ export interface AppContextInterface {
   updateCodeGeneratorVersion: (input: TUpdateCodeGeneratorVersion) => void;
   loadingUpdateCodeGeneratorVersion: boolean;
   errorUpdateCodeGeneratorVersion: ApolloError | undefined;
+  createServiceFromTemplate: (
+    data: models.ServiceFromTemplateCreateInput
+  ) => void;
+  loadingCreateServiceFromTemplate: boolean;
+  errorCreateServiceFromTemplate: Error | undefined;
 }
 
 const initialContext: AppContextInterface = {
@@ -84,8 +89,8 @@ const initialContext: AppContextInterface = {
   onNewProjectCompleted: () => {},
   resources: [],
   setNewService: () => {},
-  setResource: () => {},
   projectConfigurationResource: undefined,
+  pluginRepositoryResource: undefined,
   handleSearchChange: () => {},
   loadingResources: true,
   errorResources: undefined,
@@ -137,6 +142,9 @@ const initialContext: AppContextInterface = {
   updateCodeGeneratorVersion: (input: TUpdateCodeGeneratorVersion) => {},
   loadingUpdateCodeGeneratorVersion: false,
   errorUpdateCodeGeneratorVersion: undefined,
+  createServiceFromTemplate: () => {},
+  loadingCreateServiceFromTemplate: false,
+  errorCreateServiceFromTemplate: undefined,
 };
 
 export const AppContext =

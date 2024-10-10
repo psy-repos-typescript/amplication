@@ -34,6 +34,10 @@ export const GET_RESOURCES = gql`
       codeGeneratorVersion
       codeGenerator
       licensed
+      serviceTemplate {
+        id
+        name
+      }
       gitRepository {
         id
         name
@@ -56,6 +60,7 @@ export const GET_RESOURCES = gql`
         version
         createdAt
         status
+        codeGeneratorVersion
         commit {
           user {
             account {
@@ -200,6 +205,16 @@ export const UPDATE_RESOURCE = gql`
       name
       description
       gitRepositoryOverride
+    }
+  }
+`;
+
+export const CREATE_SERVICE_FROM_TEMPLATE = gql`
+  mutation createServiceFromTemplate($data: ServiceFromTemplateCreateInput!) {
+    createServiceFromTemplate(data: $data) {
+      id
+      name
+      description
     }
   }
 `;

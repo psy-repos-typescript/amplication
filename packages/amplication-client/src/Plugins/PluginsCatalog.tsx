@@ -23,10 +23,10 @@ import { Plugin, PluginVersion } from "./hooks/usePluginCatalog";
 
 import PluginInstallConfirmationDialog from "./PluginInstallConfirmationDialog";
 import PluginsCatalogItem from "./PluginsCatalogItem";
-import { useOnboardingChecklistContext } from "../OnboardingChecklist/context/OnboardingChecklistContext";
 import { useStiggContext } from "@stigg/react-sdk";
 import { BillingFeature } from "@amplication/util-billing-types";
 import { PRIVATE_PLUGINS_CATEGORY } from "./PluginTree";
+import PrivatePluginFeature from "./PrivatePluginsFeature";
 
 type Props = AppRouteProps & {
   match: match<{
@@ -115,7 +115,6 @@ const PluginsCatalog: React.FC<Props> = ({ match }: Props) => {
   }, [category, pluginCatalog, privatePluginCatalog]);
 
   const { addEntity } = useContext(AppContext);
-  const { setOnboardingProps } = useOnboardingChecklistContext();
 
   const userEntity = useMemo(() => {
     const authEntity = resourceSettings?.serviceSettings?.authEntityName;
@@ -159,13 +158,7 @@ const PluginsCatalog: React.FC<Props> = ({ match }: Props) => {
             isPrivate: category === PRIVATE_PLUGINS_CATEGORY,
           },
         },
-      })
-        .catch(console.error)
-        .then(() => {
-          setOnboardingProps({
-            pluginInstalled: true,
-          });
-        });
+      }).catch(console.error);
     },
     [
       createPluginInstallation,
@@ -173,7 +166,6 @@ const PluginsCatalog: React.FC<Props> = ({ match }: Props) => {
       resource,
       userEntity,
       setPluginInstallationData,
-      setOnboardingProps,
       category,
     ]
   );
@@ -283,6 +275,10 @@ const PluginsCatalog: React.FC<Props> = ({ match }: Props) => {
       },
     }).catch(console.error);
   }, [createDefaultEntities, resource]);
+
+  if (category === PRIVATE_PLUGINS_CATEGORY && !canUsePrivatePlugins) {
+    return <PrivatePluginFeature />;
+  }
 
   return (
     <div>

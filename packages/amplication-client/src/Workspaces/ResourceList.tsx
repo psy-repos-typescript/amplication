@@ -1,65 +1,76 @@
 import {
-  CircleBadge,
+  Button,
   CircularProgress,
+  DataGrid,
+  EnumButtonStyle,
+  EnumContentAlign,
   EnumFlexDirection,
-  EnumFlexItemMargin,
   EnumGapSize,
   EnumItemsAlign,
-  EnumPanelStyle,
-  EnumTextColor,
   EnumTextStyle,
   FlexItem,
   HorizontalRule,
   List,
-  Panel,
   SearchField,
   Snackbar,
   Text,
+  ToggleView,
 } from "@amplication/ui/design-system";
-import { Reference, gql, useMutation } from "@apollo/client";
+import { useStiggContext } from "@stigg/react-sdk";
 import { isEmpty } from "lodash";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import useLocalStorage from "react-use-localstorage";
 import CreateResourceButton from "../Components/CreateResourceButton";
 import { EmptyState } from "../Components/EmptyState";
 import { EnumImages } from "../Components/SvgThemeImage";
 import PageContent from "../Layout/PageContent";
 import { AppContext } from "../context/appContext";
 import * as models from "../models";
-import { useTracking } from "../util/analytics";
-import { AnalyticsEventNames } from "../util/analytics-events.types";
 import { formatError } from "../util/error";
 import { pluralize } from "../util/pluralize";
-import ResourceListItem from "./ResourceListItem";
-import { useStiggContext } from "@stigg/react-sdk";
-import { UsageInsights } from "../UsageInsights/UsageInsights";
 import "./ResourceList.scss";
-
-type TDeleteResourceData = {
-  deleteResource: models.Resource;
-};
+import { RESOURCE_LIST_COLUMNS } from "./ResourceListDataColumns";
+import ResourceListItem from "./ResourceListItem";
+import { useProjectBaseUrl } from "../util/useProjectBaseUrl";
+import NewServiceFromTemplateDialogWithUrlTrigger from "../ServiceTemplate/NewServiceFromTemplateDialogWithUrlTrigger";
 
 const CLASS_NAME = "resource-list";
 const PAGE_TITLE = "Project Overview";
+const LOCAL_STORAGE_KEY = "resource-list-view-mode";
+
+const VIEW_CARDS = "Cards";
+const VIEW_GRID = "Grid";
 
 function ResourceList() {
-  const { trackEvent } = useTracking();
   const { refreshData } = useStiggContext();
   const [error, setError] = useState<Error | null>(null);
 
-  const {
-    resources,
-    addEntity,
-    handleSearchChange,
-    loadingResources,
-    errorResources,
-    currentProject,
-  } = useContext(AppContext);
+  const { baseUrl: platformProjectBaseUrl } = useProjectBaseUrl({
+    overrideIsPlatformConsole: true,
+  });
+
+  const { resources, handleSearchChange, loadingResources, errorResources } =
+    useContext(AppContext);
+
+  const relevantResources = useMemo(() => {
+    return resources.filter(
+      (resource) =>
+        resource.resourceType === models.EnumResourceType.Service ||
+        resource.resourceType === models.EnumResourceType.MessageBroker
+    );
+  }, [resources]);
+
+  const [viewMode, setViewMode] = useLocalStorage(
+    LOCAL_STORAGE_KEY,
+    VIEW_CARDS
+  );
 
   const servicesLength = useMemo(() => {
-    return resources.filter(
+    return relevantResources.filter(
       (resource) => resource.resourceType === models.EnumResourceType.Service
     ).length;
-  }, [resources]);
+  }, [relevantResources]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -69,54 +80,37 @@ function ResourceList() {
     refreshData();
   }, []);
 
-  const [deleteResource] = useMutation<TDeleteResourceData>(DELETE_RESOURCE, {
-    update(cache, { data }) {
-      if (!data) return;
-      const deletedResourceId = data.deleteResource.id;
-
-      cache.modify({
-        fields: {
-          resources(existingResourceRefs, { readField }) {
-            return existingResourceRefs.filter(
-              (resourceRef: Reference) =>
-                deletedResourceId !== readField("id", resourceRef)
-            );
-          },
-        },
-      });
-      refreshData();
-    },
-  });
-
-  const handleResourceDelete = useCallback(
-    (resource) => {
-      trackEvent({
-        eventName: AnalyticsEventNames.ResourceDelete,
-      });
-      deleteResource({
-        onCompleted: () => {
-          addEntity();
-        },
-        variables: {
-          resourceId: resource.id,
-        },
-      }).catch(setError);
-    },
-    [deleteResource, setError, trackEvent]
-  );
-
   const errorMessage =
     formatError(errorResources) || (error && formatError(error));
 
   return (
     <PageContent className={CLASS_NAME} pageTitle={PAGE_TITLE}>
+      <NewServiceFromTemplateDialogWithUrlTrigger />
       <FlexItem
+        itemsAlign={EnumItemsAlign.Center}
+        contentAlign={EnumContentAlign.Start}
         start={
-          <SearchField
-            label="search"
-            placeholder="search"
-            onChange={handleSearchChange}
-          />
+          <>
+            <FlexItem
+              gap={EnumGapSize.Large}
+              itemsAlign={EnumItemsAlign.Center}
+            >
+              <Text textStyle={EnumTextStyle.Tag}>
+                {relevantResources.length}{" "}
+                {pluralize(relevantResources.length, "Resource", "Resources")}
+              </Text>
+              <SearchField
+                label="search"
+                placeholder="search"
+                onChange={handleSearchChange}
+              />
+              <ToggleView
+                values={[VIEW_CARDS, VIEW_GRID]}
+                selectedValue={viewMode}
+                onValueChange={(selectedValue) => setViewMode(selectedValue)}
+              />
+            </FlexItem>
+          </>
         }
         end={
           <>
@@ -124,73 +118,47 @@ function ResourceList() {
               itemsAlign={EnumItemsAlign.Center}
               direction={EnumFlexDirection.Row}
             >
+              <Link to={`${platformProjectBaseUrl}`}>
+                <Button buttonStyle={EnumButtonStyle.Outline}>
+                  View Templates
+                </Button>
+              </Link>
               <CreateResourceButton
-                resourcesLength={resources.length}
+                resourcesLength={relevantResources.length}
                 servicesLength={servicesLength}
               />
             </FlexItem>
           </>
         }
-      />
+      ></FlexItem>
       <HorizontalRule doubleSpacing />
 
-      <Panel panelStyle={EnumPanelStyle.Bold}>
-        <FlexItem
-          itemsAlign={EnumItemsAlign.Center}
-          start={
-            <CircleBadge size="xlarge" name={currentProject?.name || ""} />
-          }
-        >
-          <FlexItem
-            direction={EnumFlexDirection.Column}
-            gap={EnumGapSize.Small}
-          >
-            <Text textStyle={EnumTextStyle.H3}>{currentProject?.name}</Text>
-            <Text textStyle={EnumTextStyle.Description}>
-              {currentProject?.description}
-            </Text>
-          </FlexItem>
-        </FlexItem>
-      </Panel>
+      {loadingResources && <CircularProgress centerToParent />}
 
-      <FlexItem
-        className={`${CLASS_NAME}__content`}
-        direction={EnumFlexDirection.Column}
-        itemsAlign={EnumItemsAlign.Stretch}
-      >
-        <Panel
-          panelStyle={EnumPanelStyle.Bold}
-          className={`${CLASS_NAME}__resources`}
-          themeColor={EnumTextColor.ThemeBlue}
-        >
-          <FlexItem margin={EnumFlexItemMargin.Bottom}>
-            <Text textStyle={EnumTextStyle.Tag}>
-              {resources.length}{" "}
-              {pluralize(resources.length, "Resource", "Resources")}
-            </Text>
-          </FlexItem>
-          {loadingResources && <CircularProgress centerToParent />}
-
-          {isEmpty(resources) && !loadingResources ? (
-            <EmptyState
-              message="There are no resources to show"
-              image={EnumImages.AddResource}
-            />
+      {isEmpty(relevantResources) && !loadingResources ? (
+        <EmptyState
+          message="There are no resources to show"
+          image={EnumImages.AddResource}
+        />
+      ) : (
+        <>
+          {viewMode === VIEW_GRID ? (
+            <div className={`${CLASS_NAME}__grid-container`}>
+              <DataGrid
+                columns={RESOURCE_LIST_COLUMNS}
+                rows={relevantResources}
+              ></DataGrid>
+            </div>
           ) : (
             <List>
               {!loadingResources &&
-                resources.map((resource) => (
-                  <ResourceListItem
-                    key={resource.id}
-                    resource={resource}
-                    onDelete={handleResourceDelete}
-                  />
+                relevantResources.map((resource) => (
+                  <ResourceListItem key={resource.id} resource={resource} />
                 ))}
             </List>
           )}
-        </Panel>
-        <UsageInsights projectIds={[currentProject?.id]} />
-      </FlexItem>
+        </>
+      )}
 
       <Snackbar
         open={Boolean(error || errorResources)}
@@ -202,11 +170,3 @@ function ResourceList() {
 }
 
 export default ResourceList;
-
-const DELETE_RESOURCE = gql`
-  mutation deleteResource($resourceId: String!) {
-    deleteResource(where: { id: $resourceId }) {
-      id
-    }
-  }
-`;

@@ -29,11 +29,6 @@ import { BuildService } from "../build/build.service";
 import { Build } from "../build/dto/Build";
 import { CURRENT_VERSION_NUMBER, USER_ENTITY_NAME } from "../entity/constants";
 import { EntityService } from "../entity/entity.service";
-import { Environment } from "../environment/dto/Environment";
-import {
-  DEFAULT_ENVIRONMENT_NAME,
-  EnvironmentService,
-} from "../environment/environment.service";
 import {
   EnumPendingChangeAction,
   EnumPendingChangeOriginType,
@@ -329,16 +324,6 @@ const EXAMPLE_COMMIT: Commit = {
   message: EXAMPLE_MESSAGE,
 };
 
-const EXAMPLE_ENVIRONMENT: Environment = {
-  id: "ExampleEnvironmentId",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  address: "ExampleEnvironmentAddress",
-  name: DEFAULT_ENVIRONMENT_NAME,
-  resourceId: EXAMPLE_RESOURCE_ID,
-  description: "ExampleEnvironmentDescription",
-};
-
 const EXAMPLE_BUILD: Build = {
   id: EXAMPLE_BUILD_ID,
   createdAt: new Date(),
@@ -491,10 +476,6 @@ const mockedUpdateServiceLicensed = jest.fn();
 const pluginInstallationServiceCreateMock = jest.fn();
 const buildServiceCreateMock = jest.fn(() => EXAMPLE_BUILD);
 
-const environmentServiceCreateDefaultEnvironmentMock = jest.fn(() => {
-  return EXAMPLE_ENVIRONMENT;
-});
-
 const projectServiceFindUniqueMock = jest.fn(() => ({
   ...EXAMPLE_PROJECT,
   resources: [EXAMPLE_RESOURCE, EXAMPLE_PROJECT_CONFIGURATION_RESOURCE],
@@ -622,13 +603,7 @@ describe("ResourceService", () => {
             releaseLock: blockServiceReleaseLockMock,
           },
         },
-        {
-          provide: EnvironmentService,
-          useClass: jest.fn().mockImplementation(() => ({
-            createDefaultEnvironment:
-              environmentServiceCreateDefaultEnvironmentMock,
-          })),
-        },
+
         {
           provide: ServiceSettingsService,
           useClass: jest.fn(() => ({
@@ -722,11 +697,63 @@ describe("ResourceService", () => {
       EXAMPLE_RESOURCE_ID,
       EXAMPLE_USER
     );
+  });
 
-    expect(environmentServiceCreateDefaultEnvironmentMock).toBeCalledTimes(1);
-    expect(environmentServiceCreateDefaultEnvironmentMock).toBeCalledWith(
-      EXAMPLE_RESOURCE_ID
+  it("should create a repo on the project when creating a service with a repo and there is no repo on the project ", async () => {
+    const createResourceArgs = {
+      args: {
+        data: {
+          name: EXAMPLE_RESOURCE_NAME,
+          description: EXAMPLE_RESOURCE_DESCRIPTION,
+          color: DEFAULT_RESOURCE_COLORS.service,
+          resourceType: EnumResourceType.Service,
+          wizardType: "create resource",
+          codeGenerator: EnumCodeGenerator.NodeJs,
+          project: {
+            connect: {
+              id: EXAMPLE_PROJECT_ID,
+            },
+          },
+          serviceSettings: EXAMPLE_SERVICE_SETTINGS,
+          gitRepository: {
+            ...EXAMPLE_GIT_REPOSITORY_INPUT,
+            isOverrideGitRepository: false, //even if isOverride is false, it should create a repo on the project
+          },
+        },
+      },
+      user: EXAMPLE_USER,
+    };
+
+    jest.spyOn(service, "projectConfiguration").mockReturnValueOnce(
+      Promise.resolve({
+        ...EXAMPLE_PROJECT_CONFIGURATION_RESOURCE,
+
+        gitRepository: null,
+        gitRepositoryId: null,
+      })
     );
+
+    expect(
+      await service.createService(
+        createResourceArgs.args,
+        createResourceArgs.user,
+        false,
+        true
+      )
+    ).toEqual(EXAMPLE_RESOURCE);
+
+    expect(prismaGitRepositoryCreateMock).toBeCalledTimes(1);
+    expect(prismaResourceUpdateMock).toBeCalledTimes(1);
+    expect(prismaResourceUpdateMock).toBeCalledWith({
+      where: { id: EXAMPLE_PROJECT_CONFIGURATION_RESOURCE_ID },
+      data: {
+        gitRepository: {
+          connect: {
+            id: EXAMPLE_GIT_REPOSITORY.id,
+          },
+        },
+      },
+    });
   });
 
   describe("createPreviewService", () => {
@@ -764,10 +791,6 @@ describe("ResourceService", () => {
 
       expect(result).toEqual(EXAMPLE_RESOURCE);
       expect(prismaResourceCreateMock).toBeCalledTimes(1);
-      expect(environmentServiceCreateDefaultEnvironmentMock).toBeCalledTimes(1);
-      expect(environmentServiceCreateDefaultEnvironmentMock).toBeCalledWith(
-        EXAMPLE_RESOURCE_ID
-      );
     });
   });
 

@@ -18,7 +18,7 @@ import { AppContext } from "../context/appContext";
 import { Commit } from "../models";
 import { AnalyticsEventNames } from "../util/analytics-events.types";
 import "./WorkspaceFooter.scss";
-import { useOnboardingChecklistContext } from "../OnboardingChecklist/context/OnboardingChecklistContext";
+import { useProjectBaseUrl } from "../util/useProjectBaseUrl";
 
 const CLASS_NAME = "workspace-footer";
 
@@ -30,9 +30,11 @@ const WorkspaceFooter: React.FC<{ lastCommit: Commit }> = ({ lastCommit }) => {
     commitRunning,
     gitRepositoryFullName,
     gitRepositoryUrl,
-    projectConfigurationResource,
     gitRepositoryOrganizationProvider,
   } = useContext(AppContext);
+
+  //use base url without platform console
+  const { baseUrl } = useProjectBaseUrl({ overrideIsPlatformConsole: false });
 
   const lastResourceBuild = useMemo(() => {
     if (!lastCommit) return null;
@@ -45,7 +47,7 @@ const WorkspaceFooter: React.FC<{ lastCommit: Commit }> = ({ lastCommit }) => {
 
   const ClickableCommitId = lastCommit && (
     <ClickableId
-      to={`/${currentWorkspace?.id}/${currentProject?.id}/commits/${lastCommit.id}`}
+      to={`${baseUrl}/commits/${lastCommit.id}`}
       id={lastCommit.id}
       label="Commit ID"
       eventData={{
@@ -57,7 +59,7 @@ const WorkspaceFooter: React.FC<{ lastCommit: Commit }> = ({ lastCommit }) => {
   const ClickableBuildId = lastResourceBuild && (
     <ClickableId
       label="Build ID"
-      to={`/${currentWorkspace?.id}/${currentProject?.id}/${lastResourceBuild.resourceId}/builds/${lastResourceBuild.id}`}
+      to={`${baseUrl}/${lastResourceBuild.resourceId}/builds/${lastResourceBuild.id}`}
       id={lastResourceBuild.id}
       eventData={{
         eventName: AnalyticsEventNames.LastBuildIdClick,
@@ -66,7 +68,6 @@ const WorkspaceFooter: React.FC<{ lastCommit: Commit }> = ({ lastCommit }) => {
   );
 
   const { gitUrl } = useBuildGitUrl(lastResourceBuild);
-  const { setOnboardingProps } = useOnboardingChecklistContext();
 
   return (
     currentProject && (
@@ -91,13 +92,6 @@ const WorkspaceFooter: React.FC<{ lastCommit: Commit }> = ({ lastCommit }) => {
                     gitRepositoryOrganizationProvider?.toLocaleLowerCase() ||
                     "_blank"
                   }
-                  onClick={() => {
-                    if (gitUrl) {
-                      setOnboardingProps({
-                        viewPRClicked: true,
-                      });
-                    }
-                  }}
                 >
                   <Text textStyle={EnumTextStyle.Description}>
                     <GitRepoDetails
@@ -119,7 +113,7 @@ const WorkspaceFooter: React.FC<{ lastCommit: Commit }> = ({ lastCommit }) => {
                 <Link
                   className={`${CLASS_NAME}__connect-to-git`}
                   title={`Connect to git`}
-                  to={`/${currentWorkspace?.id}/${currentProject?.id}/git-sync`}
+                  to={`${baseUrl}/git-sync`}
                 >
                   <Text
                     textStyle={EnumTextStyle.Description}

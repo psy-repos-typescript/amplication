@@ -514,6 +514,7 @@ enum EnumBlockType {
   ModuleAction
   ModuleDto
   PrivatePlugin
+  Package
 }
 
 enum ActionStepStatus {
@@ -591,6 +592,7 @@ enum EnumSubscriptionPlan {
   Enterprise
   PreviewBreakTheMonolith
   Essential
+  Team
 }
 
 enum EnumSubscriptionStatus {
@@ -617,6 +619,7 @@ enum EnumResourceType {
   ProjectConfiguration
   MessageBroker
   PluginRepository
+  ServiceTemplate
 }
 
 enum EnumGitProvider {

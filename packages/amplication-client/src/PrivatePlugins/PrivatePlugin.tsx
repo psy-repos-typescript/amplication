@@ -21,14 +21,20 @@ import {
   EnumTextColor,
 } from "@amplication/ui/design-system";
 import usePrivatePlugin from "./hooks/usePrivatePlugin";
+import { useProjectBaseUrl } from "../util/useProjectBaseUrl";
 
-const PrivatePlugin = () => {
+type Props = {
+  pluginRepositoryResourceId: string;
+};
+
+const PrivatePlugin = ({ pluginRepositoryResourceId }: Props) => {
   const match = useRouteMatch<{
-    resource: string;
     privatePluginId: string;
-  }>("/:workspace/:project/:resource/private-plugins/:privatePluginId");
+  }>("/:workspace/platform/:project/private-plugins/:privatePluginId");
 
-  const { privatePluginId, resource } = match?.params ?? {};
+  const { baseUrl } = useProjectBaseUrl();
+
+  const { privatePluginId } = match?.params ?? {};
   const {
     currentWorkspace,
     currentProject,
@@ -46,7 +52,7 @@ const PrivatePlugin = () => {
     getPrivatePluginRefetch: refetch,
     updatePrivatePlugin,
     updatePrivatePluginError: updateError,
-  } = usePrivatePlugin(resource);
+  } = usePrivatePlugin(pluginRepositoryResourceId);
 
   useEffect(() => {
     if (!resetPendingChangesIndicator) return;
@@ -84,10 +90,8 @@ const PrivatePlugin = () => {
   const errorMessage = formatError(error) || formatError(updateError);
 
   const handleDeletePrivatePlugin = useCallback(() => {
-    history.push(
-      `/${currentWorkspace?.id}/${currentProject?.id}/${resource}/private-plugins`
-    );
-  }, [history, currentWorkspace?.id, currentProject?.id, resource]);
+    history.push(`${baseUrl}/private-plugins`);
+  }, [history, currentWorkspace?.id, currentProject?.id]);
 
   useEffect(() => {
     getPrivatePlugin(privatePluginId);

@@ -14,6 +14,7 @@ import {
   FeatureIndicatorContainer,
 } from "./FeatureIndicatorContainer";
 import { useStiggContext } from "@stigg/react-sdk";
+import { CREATE_SERVICE_FROM_TEMPLATE_TRIGGER_URL } from "../ServiceTemplate/NewServiceFromTemplateDialogWithUrlTrigger";
 
 const CLASS_NAME = "create-resource-button";
 
@@ -33,17 +34,16 @@ const ITEMS: CreateResourceButtonItemType[] = [
     info: "Create a service with your choice of APIs, database, and authentication",
   },
   {
+    type: models.EnumResourceType.ServiceTemplate,
+    label: "Service From Template",
+    route: `?${CREATE_SERVICE_FROM_TEMPLATE_TRIGGER_URL}`,
+    info: "Create a service from a pre-configured template",
+  },
+  {
     type: models.EnumResourceType.MessageBroker,
     label: "Message Broker",
     route: "create-broker",
     info: "Create a message broker to facilitate communication between services",
-  },
-  {
-    type: models.EnumResourceType.PluginRepository,
-    label: "Plugin Repository",
-    route: "create-plugin-repository",
-    info: "Create a plugin repository to upload and manage plugins",
-    licenseRequired: BillingFeature.PrivatePlugins,
   },
 ];
 

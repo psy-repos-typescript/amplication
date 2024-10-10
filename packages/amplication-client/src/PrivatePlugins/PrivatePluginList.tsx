@@ -3,6 +3,7 @@ import {
   EnabledIndicator,
   EnumItemsAlign,
   FlexItem,
+  HorizontalRule,
   SearchField,
   Snackbar,
 } from "@amplication/ui/design-system";
@@ -16,26 +17,27 @@ import { formatError } from "../util/error";
 import NewPrivatePlugin from "./NewPrivatePlugin";
 import "./PrivatePluginList.scss";
 import usePrivatePlugin from "./hooks/usePrivatePlugin";
+import { useProjectBaseUrl } from "../util/useProjectBaseUrl";
 
 const CLASS_NAME = "private-plugin-list";
 
 type Props = {
-  resourceId: string;
   selectFirst?: boolean;
 };
 
 export const PrivatePluginList = React.memo(
-  ({ resourceId, selectFirst = false }: Props) => {
+  ({ selectFirst = false }: Props) => {
     const [searchPhrase, setSearchPhrase] = useState<string>("");
-    const { currentWorkspace, currentProject, currentResource } =
-      useContext(AppContext);
+    const { pluginRepositoryResource } = useContext(AppContext);
+
+    const { baseUrl } = useProjectBaseUrl({ overrideIsPlatformConsole: true });
 
     const {
       getPrivatePluginsData: data,
       getPrivatePlugins,
       getPrivatePluginsError: error,
       getPrivatePluginsLoading: loading,
-    } = usePrivatePlugin(currentResource?.id);
+    } = usePrivatePlugin(pluginRepositoryResource?.id);
 
     const handleSearchChange = useCallback(
       (value) => {
@@ -49,33 +51,33 @@ export const PrivatePluginList = React.memo(
 
     const handlePrivatePluginChange = useCallback(
       (privatePlugin: models.PrivatePlugin) => {
-        const fieldUrl = `/${currentWorkspace?.id}/${currentProject?.id}/${resourceId}/private-plugins/${privatePlugin.id}`;
+        const fieldUrl = `${baseUrl}/private-plugins/${privatePlugin.id}`;
         history.push(fieldUrl);
       },
-      [history, resourceId, currentWorkspace, currentProject]
+      [history, baseUrl]
     );
 
     useEffect(() => {
       if (selectFirst && data && !isEmpty(data.privatePlugins)) {
         const privatePlugin = data.privatePlugins[0];
-        const fieldUrl = `/${currentWorkspace?.id}/${currentProject?.id}/${resourceId}/private-plugins/${privatePlugin.id}`;
+        const fieldUrl = `${baseUrl}/private-plugins/${privatePlugin.id}`;
         history.push(fieldUrl);
       }
-    }, [
-      data,
-      selectFirst,
-      resourceId,
-      history,
-      currentWorkspace,
-      currentProject,
-    ]);
+    }, [data, selectFirst, history, baseUrl]);
 
     useEffect(() => {
       getPrivatePlugins(searchPhrase);
-    }, [getPrivatePlugins, resourceId, searchPhrase]);
+    }, [getPrivatePlugins, searchPhrase]);
 
     return (
       <div className={CLASS_NAME}>
+        <InnerTabLink
+          icon="settings"
+          to={`${baseUrl}/private-plugins/git-settings`}
+        >
+          <FlexItem itemsAlign={EnumItemsAlign.Center}>Git Settings</FlexItem>
+        </InnerTabLink>
+        <HorizontalRule />
         <SearchField
           label="search"
           placeholder="search"
@@ -85,26 +87,25 @@ export const PrivatePluginList = React.memo(
         {loading && <CircularProgress />}
         <div className={`${CLASS_NAME}__list`}>
           {data?.privatePlugins?.map((privatePlugin) => (
-            <div key={privatePlugin.id} className={`${CLASS_NAME}__list__item`}>
-              <InnerTabLink
-                icon="plugin"
-                to={`/${currentWorkspace?.id}/${currentProject?.id}/${resourceId}/private-plugins/${privatePlugin.id}`}
+            <InnerTabLink
+              key={privatePlugin.id}
+              icon="plugin"
+              to={`${baseUrl}/private-plugins/${privatePlugin.id}`}
+            >
+              <FlexItem
+                itemsAlign={EnumItemsAlign.Center}
+                end={<EnabledIndicator enabled={privatePlugin.enabled} />}
+                singeChildWithEllipsis
               >
-                <FlexItem
-                  itemsAlign={EnumItemsAlign.Center}
-                  end={<EnabledIndicator enabled={privatePlugin.enabled} />}
-                  singeChildWithEllipsis
-                >
-                  {privatePlugin.displayName}
-                </FlexItem>
-              </InnerTabLink>
-            </div>
+                {privatePlugin.displayName}
+              </FlexItem>
+            </InnerTabLink>
           ))}
         </div>
         {data?.privatePlugins && (
           <NewPrivatePlugin
             onPrivatePluginAdd={handlePrivatePluginChange}
-            resourceId={resourceId}
+            resourceId={pluginRepositoryResource?.id}
           />
         )}
         <Snackbar open={Boolean(error)} message={errorMessage} />

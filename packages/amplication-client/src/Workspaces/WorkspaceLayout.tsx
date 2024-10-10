@@ -28,11 +28,11 @@ import useCommits from "../VersionControl/hooks/useCommits";
 import RedeemCoupon from "../User/RedeemCoupon";
 import PendingChanges from "../VersionControl/PendingChanges";
 import LastCommit from "../VersionControl/LastCommit";
-import { EnumSubscriptionStatus } from "../models";
+import { EnumResourceTypeGroup, EnumSubscriptionStatus } from "../models";
 import Assistant from "../Assistant/Assistant";
 import ResponsiveContainer from "../Components/ResponsiveContainer";
 import { AssistantContextProvider } from "../Assistant/context/AssistantContext";
-import { OnboardingChecklistContextProvider } from "../OnboardingChecklist/context/OnboardingChecklistContext";
+import { useProjectBaseUrl } from "../util/useProjectBaseUrl";
 
 const MobileMessage = lazy(() => import("../Layout/MobileMessage"));
 
@@ -74,6 +74,8 @@ const WorkspaceLayout: React.FC<Props> = ({
     currentProjectConfiguration,
   } = useProjectSelector(authenticated, currentWorkspace);
 
+  const { isPlatformConsole } = useProjectBaseUrl();
+
   const {
     pendingChanges,
     commitRunning,
@@ -86,19 +88,24 @@ const WorkspaceLayout: React.FC<Props> = ({
     setPendingChangesError,
     resetPendingChangesIndicator,
     setResetPendingChangesIndicator,
-  } = usePendingChanges(currentProject);
+  } = usePendingChanges(
+    currentProject,
+    isPlatformConsole
+      ? EnumResourceTypeGroup.Platform
+      : EnumResourceTypeGroup.Services
+  );
 
   const commitUtils = useCommits(currentProject?.id);
 
   const {
     resources,
     projectConfigurationResource,
+    pluginRepositoryResource,
     handleSearchChange,
     loadingResources,
     errorResources,
     reloadResources,
     currentResource,
-    setResource,
     createService,
     loadingCreateService,
     errorCreateService,
@@ -115,6 +122,9 @@ const WorkspaceLayout: React.FC<Props> = ({
     updateCodeGeneratorVersion,
     loadingUpdateCodeGeneratorVersion,
     errorUpdateCodeGeneratorVersion,
+    createServiceFromTemplate,
+    loadingCreateServiceFromTemplate,
+    errorCreateServiceFromTemplate,
   } = useResources(currentWorkspace, currentProject, addBlock, addEntity);
 
   useEffect(() => {
@@ -183,6 +193,7 @@ const WorkspaceLayout: React.FC<Props> = ({
         resources,
         setNewService: createService,
         projectConfigurationResource,
+        pluginRepositoryResource,
         handleSearchChange,
         loadingResources,
         reloadResources,
@@ -190,7 +201,6 @@ const WorkspaceLayout: React.FC<Props> = ({
         loadingCreateService,
         errorCreateService,
         currentResource,
-        setResource,
         pendingChanges,
         commitRunning,
         pendingChangesIsError,
@@ -220,59 +230,60 @@ const WorkspaceLayout: React.FC<Props> = ({
         updateCodeGeneratorVersion,
         loadingUpdateCodeGeneratorVersion,
         errorUpdateCodeGeneratorVersion,
+        createServiceFromTemplate,
+        loadingCreateServiceFromTemplate,
+        errorCreateServiceFromTemplate,
       }}
     >
-      <OnboardingChecklistContextProvider>
-        <AssistantContextProvider>
-          {isMobileOnly ? (
-            <MobileMessage />
-          ) : (
-            <StiggProvider
-              apiKey={REACT_APP_BILLING_API_KEY}
-              customerId={currentWorkspace.id}
-            >
-              <Track>
-                <div className={`${moduleClass}__assistant__wrapper`}>
-                  {REACT_APP_FEATURE_AI_ASSISTANT_ENABLED === "true" && (
-                    <div className={`${moduleClass}__assistant`}>
-                      <Assistant />
-                    </div>
-                  )}
-                  <div className={moduleClass}>
-                    <WorkspaceHeader />
-                    <CompleteInvitation />
-                    <RedeemCoupon />
-
-                    <div className={`${moduleClass}__page_content`}>
-                      <ResponsiveContainer
-                        className={`${moduleClass}__main_content`}
-                      >
-                        {innerRoutes}
-                      </ResponsiveContainer>
-
-                      {currentProject ? (
-                        <div className={`${moduleClass}__changes_menu`}>
-                          <PendingChanges projectId={currentProject.id} />
-                          {commitUtils.lastCommit && (
-                            <LastCommit lastCommit={commitUtils.lastCommit} />
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <WorkspaceFooter lastCommit={commitUtils.lastCommit} />
-                    <HubSpotChatComponent
-                      setChatStatus={setChatStatus}
-                      chatStatus={chatStatus}
-                    />
-                    <ScreenResolutionMessage />
+      <AssistantContextProvider>
+        {isMobileOnly ? (
+          <MobileMessage />
+        ) : (
+          <StiggProvider
+            apiKey={REACT_APP_BILLING_API_KEY}
+            customerId={currentWorkspace.id}
+          >
+            <Track>
+              <div className={`${moduleClass}__assistant__wrapper`}>
+                {REACT_APP_FEATURE_AI_ASSISTANT_ENABLED === "true" && (
+                  <div className={`${moduleClass}__assistant`}>
+                    <Assistant />
                   </div>
+                )}
+                <div className={moduleClass}>
+                  <WorkspaceHeader />
+                  <CompleteInvitation />
+                  <RedeemCoupon />
+
+                  <div className={`${moduleClass}__page_content`}>
+                    <ResponsiveContainer
+                      className={`${moduleClass}__main_content`}
+                    >
+                      {innerRoutes}
+                    </ResponsiveContainer>
+
+                    {currentProject ? (
+                      <div className={`${moduleClass}__changes_menu`}>
+                        <PendingChanges projectId={currentProject.id} />
+                        {!isPlatformConsole && commitUtils.lastCommit && (
+                          <LastCommit lastCommit={commitUtils.lastCommit} />
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <WorkspaceFooter lastCommit={commitUtils.lastCommit} />
+                  <HubSpotChatComponent
+                    setChatStatus={setChatStatus}
+                    chatStatus={chatStatus}
+                  />
+                  <ScreenResolutionMessage />
                 </div>
-              </Track>
-            </StiggProvider>
-          )}
-        </AssistantContextProvider>
-      </OnboardingChecklistContextProvider>
+              </div>
+            </Track>
+          </StiggProvider>
+        )}
+      </AssistantContextProvider>
     </AppContextProvider>
   ) : (
     <CircularProgress centerToParent />

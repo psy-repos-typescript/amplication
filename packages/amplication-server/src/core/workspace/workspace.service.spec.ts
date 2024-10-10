@@ -13,8 +13,6 @@ import { DeleteUserArgs } from "./dto";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { ProjectService } from "../project/project.service";
 import { BillingService } from "../billing/billing.service";
-import { ModuleService } from "../module/module.service";
-import { ModuleActionService } from "../moduleAction/moduleAction.service";
 import { AmplicationLogger } from "@amplication/util/nestjs/logging";
 import { EnumResourceType } from "../resource/dto/EnumResourceType";
 import { Env } from "../../env";
@@ -23,7 +21,6 @@ import { BooleanEntitlement, MeteredEntitlement } from "@stigg/node-server-sdk";
 import { BillingLimitationError } from "../../errors/BillingLimitationError";
 import { BillingFeature } from "@amplication/util-billing-types";
 import { MockedSegmentAnalyticsProvider } from "../../services/segmentAnalytics/tests";
-import { ModuleDtoService } from "../moduleDto/moduleDto.service";
 
 const EXAMPLE_WORKSPACE_ID = "exampleWorkspaceId";
 const EXAMPLE_WORKSPACE_NAME = "exampleWorkspaceName";
@@ -205,25 +202,6 @@ describe("WorkspaceService", () => {
           },
         },
         {
-          provide: ModuleService,
-          useClass: jest.fn(() => {
-            return {};
-          }),
-        },
-
-        {
-          provide: ModuleDtoService,
-          useClass: jest.fn(() => {
-            return {};
-          }),
-        },
-        {
-          provide: ModuleActionService,
-          useClass: jest.fn(() => {
-            return {};
-          }),
-        },
-        {
           provide: AmplicationLogger,
           useClass: jest.fn().mockImplementation(() => ({
             error: jest.fn(() => {
@@ -350,9 +328,9 @@ describe("WorkspaceService", () => {
     beforeEach(() => {
       billingServiceIsBillingEnabledMock.mockReturnValue(true);
     });
-    it("should create a workspace if block workspace creation is false", async () => {
+    it("should create a workspace if allow workspace creation is true", async () => {
       billingServiceMock.getBooleanEntitlement.mockReturnValueOnce({
-        hasAccess: false,
+        hasAccess: true,
       } as unknown as BooleanEntitlement);
 
       const args = {
@@ -391,9 +369,9 @@ describe("WorkspaceService", () => {
       expect(createDemoRepoMock).toBeCalledTimes(0);
     });
 
-    it("should throw a billing limitation error if the block workspace creation entitlement is true", async () => {
+    it("should throw a billing limitation error if the allow workspace creation entitlement is false", async () => {
       billingServiceMock.getBooleanEntitlement.mockReturnValueOnce({
-        hasAccess: true,
+        hasAccess: false,
       } as unknown as BooleanEntitlement);
 
       const args = {
@@ -410,16 +388,58 @@ describe("WorkspaceService", () => {
       ).rejects.toThrow(
         new BillingLimitationError(
           "Your current plan does not allow creating workspaces",
-          BillingFeature.BlockWorkspaceCreation
+          BillingFeature.AllowWorkspaceCreation
         )
       );
 
       expect(prismaWorkspaceCreateMock).toBeCalledTimes(0);
     });
 
-    it("should create a demo repo when creating a workspace ", async () => {
+    it("should create a workspace even if allow workspace creation is false when it's the first workspace for a new user", async () => {
       billingServiceMock.getBooleanEntitlement.mockReturnValueOnce({
         hasAccess: false,
+      } as unknown as BooleanEntitlement);
+
+      const args = {
+        accountId: EXAMPLE_ACCOUNT_ID,
+        args: {
+          data: {
+            name: EXAMPLE_WORKSPACE_NAME,
+          },
+        },
+      };
+      const prismaArgs = {
+        ...args.args,
+        data: {
+          ...args.args.data,
+          users: {
+            create: {
+              account: { connect: { id: args.accountId } },
+              userRoles: {
+                create: {
+                  role: Role.OrganizationAdmin,
+                },
+              },
+              isOwner: true,
+            },
+          },
+        },
+        include: {
+          users: true,
+        },
+      };
+      expect(
+        await service.createWorkspace(args.accountId, args.args, true)
+      ).toEqual(EXAMPLE_WORKSPACE);
+      expect(prismaWorkspaceCreateMock).toBeCalledTimes(1);
+      expect(prismaWorkspaceCreateMock).toBeCalledWith(prismaArgs);
+      expect(createDemoRepoMock).toBeCalledTimes(0);
+    });
+
+    it("should create a demo repo when creating a workspace ", async () => {
+      billingServiceMock.getBooleanEntitlement.mockReset();
+      billingServiceMock.getBooleanEntitlement.mockReturnValueOnce({
+        hasAccess: true,
       } as unknown as BooleanEntitlement);
 
       const args = {
@@ -454,6 +474,7 @@ describe("WorkspaceService", () => {
         await service.createWorkspace(
           args.accountId,
           args.args,
+          false,
           undefined,
           true
         )
@@ -468,9 +489,9 @@ describe("WorkspaceService", () => {
     beforeEach(() => {
       billingServiceIsBillingEnabledMock.mockReturnValue(false);
     });
-    it("should create a workspace even if the block workspace creation entitlement is true", async () => {
+    it("should create a workspace even if the allow workspace creation entitlement is false", async () => {
       billingServiceMock.getBooleanEntitlement.mockReturnValueOnce({
-        hasAccess: true,
+        hasAccess: false,
       } as unknown as BooleanEntitlement);
 
       const args = {

@@ -41,6 +41,7 @@ const SUBSCRIPTION_TO_CHIP_STYLE: {
   [EnumSubscriptionPlan.Enterprise]: EnumChipStyle.ThemeGreen,
   [EnumSubscriptionPlan.PreviewBreakTheMonolith]: EnumChipStyle.ThemeOrange,
   [EnumSubscriptionPlan.Essential]: EnumChipStyle.ThemeBlue,
+  [EnumSubscriptionPlan.Team]: EnumChipStyle.ThemeBlue,
 };
 
 export const WorkspaceOverview = () => {
@@ -116,17 +117,8 @@ export const WorkspaceOverview = () => {
           </FlexItem.FlexEnd>
         </FlexItem>
       </Panel>
-      <FlexItem
-        className={`${CLASS_NAME}__content`}
-        direction={EnumFlexDirection.Column}
-        itemsAlign={EnumItemsAlign.Stretch}
-      >
-        <ProjectList
-          projects={projectsList}
-          workspaceId={currentWorkspace.id}
-        />
-        <UsageInsights projectIds={projectIds} />
-      </FlexItem>
+
+      <ProjectList projects={projectsList} workspaceId={currentWorkspace.id} />
     </PageContent>
   );
 };

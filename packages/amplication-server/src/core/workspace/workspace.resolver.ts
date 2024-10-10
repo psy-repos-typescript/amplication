@@ -88,11 +88,6 @@ export class WorkspaceResolver {
       currentUser
     );
 
-    await this.workspaceService.migrateWorkspace(
-      currentUser.workspace,
-      currentUser
-    );
-
     return { ...currentUser.workspace, externalId };
   }
 
@@ -131,6 +126,7 @@ export class WorkspaceResolver {
     return this.workspaceService.createWorkspace(
       currentUser.account.id,
       args,
+      false,
       currentUser.workspace.id
     );
   }

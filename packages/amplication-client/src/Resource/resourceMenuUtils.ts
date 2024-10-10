@@ -27,6 +27,7 @@ export const resourceMenuLayout: {
     "connections",
     "settings",
   ],
+  [EnumResourceType.ServiceTemplate]: ["plugins", "settings"],
   [EnumResourceType.ProjectConfiguration]: ["git", "settings"],
   [EnumResourceType.MessageBroker]: ["topics", "services", "git", "settings"],
   [EnumResourceType.PluginRepository]: ["privatePlugins", "git2", "settings"],
@@ -107,5 +108,9 @@ export const setResourceUrlLink = (
   workspace: string,
   project: string,
   resource: string,
-  itemUrl: string
-): string => `/${workspace}/${project}/${resource}${itemUrl}`;
+  itemUrl: string,
+  isPlatformConsole = false
+): string =>
+  !isPlatformConsole
+    ? `/${workspace}/${project}/${resource}${itemUrl}`
+    : `/${workspace}/platform/${project}/${resource}${itemUrl}`;

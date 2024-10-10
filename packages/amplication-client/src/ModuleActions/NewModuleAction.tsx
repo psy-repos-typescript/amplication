@@ -1,16 +1,15 @@
 import { Snackbar } from "@amplication/ui/design-system";
 import { pascalCase } from "pascal-case";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { Button, EnumButtonStyle } from "../Components/Button";
 import NewModuleChild from "../Modules/NewModuleChild";
 import { useModulesContext } from "../Modules/modulesContext";
-import { AppContext } from "../context/appContext";
 import { REACT_APP_FEATURE_CUSTOM_ACTIONS_ENABLED } from "../env";
 import * as models from "../models";
 import { formatError } from "../util/error";
+import { useResourceBaseUrl } from "../util/useResourceBaseUrl";
 import useModuleAction from "./hooks/useModuleAction";
-import { useOnboardingChecklistContext } from "../OnboardingChecklist/context/OnboardingChecklistContext";
 
 type Props = {
   resourceId: string;
@@ -26,11 +25,10 @@ const NewModuleAction = ({
   buttonStyle = EnumButtonStyle.Primary,
 }: Props) => {
   const history = useHistory();
-  const { currentWorkspace, currentProject } = useContext(AppContext);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const { baseUrl } = useResourceBaseUrl({ overrideResourceId: resourceId });
 
   const { customActionsLicenseEnabled } = useModulesContext();
-  const { setOnboardingProps } = useOnboardingChecklistContext();
 
   const {
     createModuleAction,
@@ -64,24 +62,13 @@ const NewModuleAction = ({
               onActionCreated(result.data.createModuleAction);
             }
             history.push(
-              `/${currentWorkspace?.id}/${currentProject?.id}/${resourceId}/modules/${moduleId}/actions/${result.data.createModuleAction.id}`
+              `${baseUrl}/modules/${moduleId}/actions/${result.data.createModuleAction.id}`
             );
-            setOnboardingProps({
-              apiUpdated: true,
-            });
           }
         });
       setDialogOpen(false);
     },
-    [
-      createModuleAction,
-      resourceId,
-      onActionCreated,
-      history,
-      currentWorkspace?.id,
-      currentProject?.id,
-      setOnboardingProps,
-    ]
+    [createModuleAction, resourceId, onActionCreated, history, baseUrl]
   );
 
   const errorMessage = formatError(error);
